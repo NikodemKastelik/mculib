@@ -1,0 +1,5 @@
+language: bash
+
+script:
+    - echo "Running all unit tests"
+    - cd unit && ./run_all_tests.sh
