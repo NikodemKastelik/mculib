@@ -6,12 +6,6 @@ install:
 
 script:
     - echo "Creating nightly branch"
+    - ./nightly_create.sh
     - git checkout nightly
-    - git rev-parse origin/master | awk '{cmd="git reset --hard "; print cmd $1}' | bash
-    - git clean -f -d
-    - git merge origin/feature/nk5-integrate-unity
-    - git merge origin/feature/nk2-integrate-string-formatting
-    - git merge origin/feature/nk3-implement-basic-ring-buffer
-    - git merge origin/feature/nk4-implement-basic-logger
-    - git merge origin/feature/nk6-create-basic-pid
     - git push -f https://${USERNAME}:${GITHUB_API_KEY}@${GH_REF} HEAD:nightly
