@@ -410,7 +410,7 @@ static size_t _ftoa(out_fct_type out, char* buffer, size_t idx, size_t maxlen, d
 
 
 // internal vsnprintf
-static int _vsnprintf(out_fct_type out, char* buffer, const size_t maxlen, const char* format, va_list va)
+static int _mini_vsnprintf(out_fct_type out, char* buffer, const size_t maxlen, const char* format, va_list va)
 {
   unsigned int flags, width, precision, n;
   size_t idx = 0U;
@@ -687,7 +687,7 @@ int mini_sprintf(char* buffer, const char* format, ...)
 {
   va_list va;
   va_start(va, format);
-  const int ret = _vsnprintf(_out_buffer, buffer, (size_t)-1, format, va);
+  const int ret = _mini_vsnprintf(_out_buffer, buffer, (size_t)-1, format, va);
   va_end(va);
   return ret;
 }
@@ -697,7 +697,7 @@ int mini_snprintf(char* buffer, size_t count, const char* format, ...)
 {
   va_list va;
   va_start(va, format);
-  const int ret = _vsnprintf(_out_buffer, buffer, count, format, va);
+  const int ret = _mini_vsnprintf(_out_buffer, buffer, count, format, va);
   va_end(va);
   return ret;
 }
@@ -705,7 +705,7 @@ int mini_snprintf(char* buffer, size_t count, const char* format, ...)
 
 int mini_vsnprintf(char* buffer, size_t count, const char* format, va_list va)
 {
-  return _vsnprintf(_out_buffer, buffer, count, format, va);
+  return _mini_vsnprintf(_out_buffer, buffer, count, format, va);
 }
 
 
@@ -714,7 +714,7 @@ int fctprintf(void (*out)(char character, void* arg), void* arg, const char* for
   va_list va;
   va_start(va, format);
   const out_fct_wrap_type out_fct_wrap = { out, arg };
-  const int ret = _vsnprintf(_out_fct, (char*)&out_fct_wrap, (size_t)-1, format, va);
+  const int ret = _mini_vsnprintf(_out_fct, (char*)&out_fct_wrap, (size_t)-1, format, va);
   va_end(va);
   return ret;
 }
