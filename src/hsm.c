@@ -49,6 +49,44 @@ static const hsm_state_t * hsm_lca_get(const hsm_state_t * state1, const hsm_sta
     return NULL;
 }
 
+static const hsm_state_t * hsm_lca_resolve(const hsm_state_t * current, const hsm_state_t * next)
+{
+    const hsm_state_t * state_lca;
+    if (current == next)
+    {
+        // Self transition
+        state_lca = current->parent;
+    }
+    else
+    {
+        state_lca = hsm_lca_get(current, next);
+    }
+
+    // Dispatch exit event till the LCA state is encountered
+    while (current != state_lca)
+    {
+        (void)current->handler(HSM_EVENT_EXIT);
+        current = current->parent;
+    }
+
+    // Build state tree from target to the LCA state
+    const hsm_state_t * in_states[HSM_MAX_DEPTH];
+    uint32_t idx = 0;
+    while (next != state_lca)
+    {
+        in_states[idx++] = next;
+        next = next->parent;
+    }
+
+    // Dispatch entry event on successive states in reverse order,
+    // up to one state before the final one.
+    while (idx > 1)
+    {
+       (void)in_states[--idx]->handler(HSM_EVENT_ENTRY);
+    }
+    return in_states[0];
+}
+
 void hsm_start(hsm_t * hsm, const hsm_state_t * initial_state)
 {
     hsm->current = initial_state;
@@ -58,55 +96,28 @@ void hsm_start(hsm_t * hsm, const hsm_state_t * initial_state)
 
 void hsm_dispatch(hsm_t * hsm, hsm_event_t evt)
 {
-    bool was_evt_handled;
-    const hsm_state_t * state = hsm->current;
+    bool again;
     do
     {
-        was_evt_handled = state->handler(evt);
-        state = state->parent;
-    }
-    while (!was_evt_handled && state);
-
-    if (hsm->next)
-    {
-        const hsm_state_t * state_lca;
-        state = hsm->current;
-        if (state == hsm->next)
+        bool was_evt_handled;
+        const hsm_state_t * state = hsm->current;
+        do
         {
-            // Self transition
-            state_lca = state->parent;
-        }
-        else
-        {
-            state_lca = hsm_lca_get(hsm->current, hsm->next);
-        }
-
-        // Dispatch exit event till the LCA state is encountered
-        while (state != state_lca)
-        {
-            (void)state->handler(HSM_EVENT_EXIT);
+            was_evt_handled = state->handler(evt);
             state = state->parent;
         }
+        while (!was_evt_handled && state);
 
-        // Build state tree from target to the LCA state
-        const hsm_state_t * in_states[HSM_MAX_DEPTH];
-        uint32_t idx = 0;
-        state = hsm->next;
-        while (state != state_lca)
+        again = false;
+        if (hsm->next)
         {
-            in_states[idx++] = state;
-            state = state->parent;
+            hsm->current = hsm_lca_resolve(hsm->current, hsm->next);
+            hsm->next = NULL;
+            evt = HSM_EVENT_ENTRY;
+            again = true;
         }
-
-        // Dispatch entry event on successive states in reverse order
-        while (idx)
-        {
-           (void)in_states[--idx]->handler(HSM_EVENT_ENTRY);
-        }
-
-        hsm->current = hsm->next;
-        hsm->next = NULL;
     }
+    while (again);
 }
 
 void hsm_transition(hsm_t * hsm, const hsm_state_t * next)
